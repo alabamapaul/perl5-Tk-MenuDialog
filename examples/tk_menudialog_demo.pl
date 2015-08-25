@@ -24,7 +24,7 @@ use Data::Dumper;
 ##---------------------------------------
 ## Hash used to initialize the form
 ##---------------------------------------
-Readonly::Scalar my @MENU_ITEMS => (
+Readonly::Array my @MENU_ITEMS => (
   { label => qq{&Configure}, icon => qq{settings.png}, },
   { label => qq{Te&st},      icon => qq{test.png}, },
   { label => qq{&Run},       icon => qq{run.png},},
@@ -35,12 +35,11 @@ Readonly::Scalar my @MENU_ITEMS => (
 ##----------------------------------------------------------------------------
 my $menu = Tk::MenuDialog->new(title => qq{Tk::MenuDialog Demo});
 
-$menu->add_icon_path(
-  File::Spec->catdir(File::Spec->splitdir(dirname(__FILE__)), qq{icons});
-  );
-$menu->add_icon_path(q{\TEMP});
+## Add this script's directory
+$menu->add_icon_path(dirname(__FILE__));
 
-foreach my $item (@MAIN_MENU)
+## Add the menu items
+foreach my $item (@MENU_ITEMS)
 {
   $menu->add_item($item);
 }

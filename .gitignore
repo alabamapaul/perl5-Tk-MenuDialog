@@ -8,3 +8,4 @@
 ## Dzil artifacts
 .build
 *.tmp
+Tk-MenuDialog*

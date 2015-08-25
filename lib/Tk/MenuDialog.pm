@@ -55,6 +55,8 @@ use Readonly;
 use Carp qw(confess cluck);
 use Tk;
 use Tk::Photo;
+use Tk::PNG;
+use Tk::JPEG;
 use Data::Dumper;
 use JSON;
 use Try::Tiny;
@@ -307,7 +309,7 @@ sub add_item ## no critic (RequireArgUnpacking,ProhibitUnusedPrivateSubroutines)
   my @missing = ();
   foreach my $key (qw(label))
   {
-    push(@missing, $key) unless(exists($params->{$key}));
+    push(@missing, $key) unless(exists($param->{$key}));
   }
   if (scalar(@missing))
   {
@@ -317,16 +319,10 @@ sub add_item ## no critic (RequireArgUnpacking,ProhibitUnusedPrivateSubroutines)
       );
   }
 
-  ## Get current item count
-  my $index = scalar(@{$self->items});
-  
-  ## Create the new item
-  my $item = {%{$param}, index => $index};
-  
-  ## Save the field in the object's fields attribute
-  push(@{$self->items}, $item) if ($item);
+  ## Save the item in the list of items
+  push(@{$self->items}, $param) if ($param);
       
-  return($item);
+  return($param);
 }
 
 ##****************************************************************************
@@ -364,6 +360,7 @@ sub show
   my $test   = shift;
   my $win;    ## Window widget
   my $result; ## Variable used to capture the result
+  my $buttons = [];
 
   ## Create the window
   if ($parent)
@@ -388,10 +385,11 @@ sub show
   
   my $first;
   ## Now add the itmes
+  my $number = 0;
   foreach my $item (@{$self->items})
   {
     ## See if the widget was created
-    if (my $widget = $self->_build_button($item, $win))
+    if (my $widget = $self->_build_button($item, $win, $number))
     {
       ## Place the widget
       $widget->grid(
@@ -399,15 +397,19 @@ sub show
         -rowspan    => 1,
         -column     => 1,
         -columnspan => 1,
-        -sticky     => qq{w},
+        -sticky     => qq{nsew},
       );
       
+      ## See if button should be disabled
+      $widget->configure(-state => qq{disabled}) if ($item->{disabled});
+
       ## Increment the row index
       $grid_row++;
       
-      ## See if this is our first non-readonly field
-      $first = $item if (!$first && !$item->enabled);
+      ## See if this is our first non-disabled field
+      $first = $widget if (!$first && !$item->{disabled});
     }
+    $number++;
   }
   
   ## Use an empty frame as a spacer 
@@ -443,7 +445,7 @@ sub show
   }
 
   ## Set the focus to the item
-  $first->widget->focus() if ($first);
+  $first->focus() if ($first);
 
   ## Wait for variable to change
   $win->waitVariable(\$result);
@@ -454,6 +456,7 @@ sub show
   ## See if we have a result
   if (defined($result))
   {
+    print(qq{Result = [$result]\n});
     ## See if the result is a valid index
     if (($result >= 0) && ($result < scalar(@{$self->items})))
     {
@@ -474,6 +477,40 @@ sub show
   return($result);
 }
 
+##****************************************************************************
+##****************************************************************************
+
+=head2 add_icon_path()
+
+=over 2
+
+=item B<Description>
+
+Description goes here
+
+=item B<Parameters>
+
+NONE
+
+=item B<Return>
+
+NONE
+
+=back
+
+=cut
+
+##----------------------------------------------------------------------------
+sub add_icon_path
+{
+  my $self = shift;
+  my $path = shift;
+  
+  push(@{$self->icon_path}, $path) if ($path);
+  
+  return;
+}
+
 ##----------------------------------------------------------------------------
 ##     @fn _build_button($item, $win)
 ##  @brief Build the button for the given item in the specified window
@@ -482,15 +519,16 @@ sub show
 ## @return 
 ##   @note 
 ##----------------------------------------------------------------------------
+Readonly::Scalar my $IMAGE_SPACER => qq{ - };
 sub _build_button
 {
   my $self   = shift;
   my $item   = shift;
-  my $number = shift;
   my $win    = shift;
+  my $number = shift;
   my $widget;
   
-  my $button_text = $self->button_label;
+  my $button_text = $item->{label};
   my $underline   = index($button_text, qq{&});
   $button_text =~ s/\&//gx; ## Remove the &
   
@@ -516,13 +554,13 @@ sub _build_button
     if ($filename)
     {
       ## Load the filename
-      $image = Tk::Photo->(-file => $filename)
+      $image = $win->Photo(-file => $filename)
     }
     else
     {
       cluck(
         qq{Could not locate icon "$item->{icon}"\nSearch Path:\n  "} .
-        join(qq{"\n  }, (qq{.}, @{$self->icon_path})) . 
+        join(qq{"\n  "}, (qq{.}, @{$self->icon_path})) . 
         qq{"\n}
         );
     }
@@ -531,14 +569,17 @@ sub _build_button
   ## Create the button
   if ($image)
   {
+    $button_text = $IMAGE_SPACER . $button_text . qq{  };
+    $underline += length($IMAGE_SPACER) if ($underline >= 0);
     $widget = $win->Button(
       -text      => $button_text,
       -font      => $self->button_font,
-      -width     => length($button_text) + 2,
+#      -width     => length($button_text) + 2,
+      -anchor    => qq{w},
       -command   => sub {${$self->_watch_variable} = $number;},
       -underline => $underline,
       -image     => $image,
-      -compound  => $item->{icon_location} // qq{left},
+      -compound  => qq{left},
     );
   }
   else
@@ -637,25 +678,29 @@ sub _set_key_bindings
   my $number = 0;
   foreach my $item (@{$self->items})
   {
-    ## Get the button text
-    my $button_text = $self->label;
-    
     ## Look for an ampersand in the label
-    my $underline   = index($button_text, qq{&});
+    my $underline = index($item->{label}, qq{&});
     
     ## See if an ampersand was found
     if ($underline >= 0)
     {
+      $underline++;
       ## Find the key within the string
-      my $keycap = lc(substr($button_text, $underline, 1));
+      my $keycap = lc(substr($item->{label}, $underline, 1));
       
       ## Bind the key
       $win->bind(
-        qq{<Alt-Key-$keycap>} => 
+        qq{<Alt-Key-$keycap>} => [
           sub
           {
-            ${$self->_watch_variable} = $number;
-          }
+            my $widget = shift;
+            my $ref = shift;
+            my $val = shift;
+            ${$ref} = $val;
+          },
+          $self->_watch_variable,
+          $number,
+          ]
         );
     }
     
