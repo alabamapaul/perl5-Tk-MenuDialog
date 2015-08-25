@@ -1,0 +1,23 @@
+{{$NEXT}}
+
+1.03    2015-08-19
+        * Minor corrections to POD
+
+1.02    2015-08-19
+        * Initial upload to CPAN
+        * Now sets focus to the first field
+        
+1.1     2015-06-03
+        * The set_field_data() now will silently return if a parameter is
+          not provided.
+        * For the Entry field, added trim_leading and trim_trailing attributes
+          to control trimming of leading and trailing whitespace when the
+          value() method is called. Both attributes default to 1
+          
+1.0     2015-06-02
+        * Added support for a validation function for each field
+        * Added support for form validation by invoking each field's 
+          validation function
+        
+0.8     2015-05-04
+        * Initial release
