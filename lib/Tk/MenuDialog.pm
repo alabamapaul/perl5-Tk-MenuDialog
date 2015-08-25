@@ -24,7 +24,7 @@ Version 0.01
 
   ## Add the script's directory to the icon path
   ## when searching for icon files
-  my $menu->add_icon_path(dirname(__FILE__));
+  $menu->add_icon_path(dirname(__FILE__));
   
   ## Add menu items to the menu
   $menu->add_item(
@@ -41,7 +41,7 @@ Version 0.01
   
   ## Display the menu and return hash reference of the selected item, 
   ## or UNDEF if canceled
-  my $selection = $form->show;
+  my $selection = $menu->show;
 
 =cut
 
@@ -273,7 +273,7 @@ sub BUILD
 ##****************************************************************************
 ##****************************************************************************
 
-=head2 add_field($hash)
+=head2 add_item($hash)
 
 =over 2
 
@@ -284,23 +284,22 @@ Add a field to the form.
 =item B<Parameters>
 
 A hash reference with the following key / value pairs:
-  label - Required paramater with 
-  icon  - Optional filename of the icon to display
+  label         - Required paramater with 
+  icon          - Optional filename of the icon to display
   icon_location - Optional location relative to button
                   text for the icon 
                   DEFAULT: "left"
-See L<Tk::MenuDialog::Item> for more details
 
 =item B<Return>
 
-UNDEF on error, or the L<Tk::MenuDialog::Item> object created
+UNDEF on error, or the hash reference of the item created
 
 =back
 
 =cut
 
 ##----------------------------------------------------------------------------
-sub add_item ## no critic (RequireArgUnpacking,ProhibitUnusedPrivateSubroutines)
+sub add_item
 {
   my $self  = shift;
   my $param = shift;
