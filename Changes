@@ -1,5 +1,11 @@
 {{$NEXT}}
-
+        * Added the initialize() method to allow initialization with a HASH
+          reference, JSON string, or filename of file containing JSON data
+        * Added button_spacing attribute to allow the addition of space
+          between buttons
+        * Updated example script to take advantage of the initialize() 
+          method
+          
 0.01    2015-08-25
         * Initial TRIAL release
 
