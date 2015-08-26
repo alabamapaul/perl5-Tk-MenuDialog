@@ -411,7 +411,7 @@ sub show
   $win->resizable(0,0);
 
   ## Now use the grid geometry manager to layout everything
-  my $grid_row = 0;
+  $self->_grid_row(0);
   
   ## Insert spacer (if needed)
   $self->_insert_spacer($win);
@@ -444,9 +444,6 @@ sub show
     ## Insert spacer (if needed)
     $self->_insert_spacer($win);
   }
-  
-  ## Use an empty frame as a spacer 
-  $win->Frame(-height => 5)->grid(-row => $grid_row++);
   
   $self->_watch_variable(\$result);
   
@@ -715,7 +712,6 @@ sub _set_key_bindings
   my $number = 0;
   foreach my $item (@{$self->items})
   {
-    my $underline = index($item->{label}, qq{&});
     ## Skip disabled buttons
     unless ($item->{disabled})
     {
