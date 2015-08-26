@@ -13,7 +13,7 @@ display a dialog of buttons to be used as a menu using Tk
 
 =head1 VERSION
 
-Version 0.01
+Version 0.02
 
 =head1 SYNOPSIS
 
@@ -62,7 +62,12 @@ use JSON;
 use Try::Tiny;
 
 ## Version string
-our $VERSION = qq{0.01};
+our $VERSION = qq{0.02};
+
+## Used when importing a form, these are "simple" non-array attributes
+Readonly::Array my @SIMPLE_ATTRIBUTES => (
+  qw(title button_font min_width min_height can_cancel button_spacing)
+);
 
 ##****************************************************************************
 ## Object attribute
@@ -193,6 +198,26 @@ has button_font => (
 
 ##****************************************************************************
 
+=head2 button_spacing
+
+=over 2
+
+Number of pixels between each button
+
+DEFAULT: 0
+
+=back
+
+=cut
+
+##----------------------------------------------------------------------------
+has button_spacing => (
+  is => qq{rw},
+  default => 0,
+);
+
+##****************************************************************************
+
 =head2 min_width
 
 =over 2
@@ -238,6 +263,12 @@ has min_height => (
 ## Holds reference to variable Tk watches for dialog completion 
 has _watch_variable  => (
   is      => qq{rw},
+);
+
+## Grid row for placing the next widget
+has _grid_row  => (
+  is      => qq{rw},
+  default => 0,
 );
 
 ##****************************************************************************
@@ -382,6 +413,9 @@ sub show
   ## Now use the grid geometry manager to layout everything
   my $grid_row = 0;
   
+  ## Insert spacer (if needed)
+  $self->_insert_spacer($win);
+  
   my $first;
   ## Now add the itmes
   my $number = 0;
@@ -392,7 +426,7 @@ sub show
     {
       ## Place the widget
       $widget->grid(
-        -row        => $grid_row,
+        -row        => $self->_next_row,
         -rowspan    => 1,
         -column     => 1,
         -columnspan => 1,
@@ -402,13 +436,13 @@ sub show
       ## See if button should be disabled
       $widget->configure(-state => qq{disabled}) if ($item->{disabled});
 
-      ## Increment the row index
-      $grid_row++;
-      
       ## See if this is our first non-disabled field
       $first = $widget if (!$first && !$item->{disabled});
     }
     $number++;
+    
+    ## Insert spacer (if needed)
+    $self->_insert_spacer($win);
   }
   
   ## Use an empty frame as a spacer 
@@ -426,7 +460,12 @@ sub show
   $win->deiconify;
   
   ## Detect user closing the window
-  $win->protocol('WM_DELETE_WINDOW',sub {$result = 0;});
+  $win->protocol('WM_DELETE_WINDOW' =>
+    sub
+    {
+      return unless ($self->can_cancel);
+      $result = -1;
+    });
 
   ## See if we are testing
   if ($test)
@@ -455,7 +494,6 @@ sub show
   ## See if we have a result
   if (defined($result))
   {
-    print(qq{Result = [$result]\n});
     ## See if the result is a valid index
     if (($result >= 0) && ($result < scalar(@{$self->items})))
     {
@@ -677,43 +715,235 @@ sub _set_key_bindings
   my $number = 0;
   foreach my $item (@{$self->items})
   {
-    ## Look for an ampersand in the label
     my $underline = index($item->{label}, qq{&});
-    
-    ## See if an ampersand was found
-    if ($underline >= 0)
+    ## Skip disabled buttons
+    unless ($item->{disabled})
     {
-      $underline++;
-      ## Find the key within the string
-      my $keycap = lc(substr($item->{label}, $underline, 1));
+      ## Look for an ampersand in the label
+      my $underline = index($item->{label}, qq{&});
       
-      ## Bind the key
-      $win->bind(
-        qq{<Alt-Key-$keycap>} => [
-          sub
-          {
-            my $widget = shift;
-            my $ref = shift;
-            my $val = shift;
-            ${$ref} = $val;
-          },
-          $self->_watch_variable,
-          $number,
-          ]
-        );
+      ## See if an ampersand was found
+      if ($underline >= 0)
+      {
+        $underline++;
+        ## Find the key within the string
+        my $keycap = lc(substr($item->{label}, $underline, 1));
+        
+        ## Bind the key
+        $win->bind(
+          qq{<Alt-Key-$keycap>} => [
+            sub
+            {
+              my $widget = shift;
+              my $ref = shift;
+              my $val = shift;
+              ${$ref} = $val;
+            },
+            $self->_watch_variable,
+            $number,
+            ]
+          );
+      }
     }
-    
     $number++;
   }
   
   ## See if option set
-  if ($self->cancel_on_escape)
+  if ($self->can_cancel and $self->cancel_on_escape)
   {
     $win->bind(qq{<Key-Escape>} => sub {${$self->_watch_variable} = -1;});
   }
   
   return;
 }
+
+##****************************************************************************
+##****************************************************************************
+
+=head2 initialize($param)
+
+=over 2
+
+=item B<Description>
+
+initialize the form from a HASH reference, JSON string, or JSON file.
+In all cases, the hash should have the following format
+
+  {
+    title      => 'My Menu',
+    can_cancel => 0,
+    items => [
+      {
+        label => '&Configure',
+        icon  => 'settings.png',
+      },
+      {
+        label => '&Run',
+        icon  => 'run.png',
+      },
+      {
+        label => 'E&xit',
+        icon  => 'exit.png',
+      },
+    ]
+  }
+
+=item B<Parameters>
+
+$param - HASH reference, or scalar containin JSON string, or filename
+
+=item B<Return>
+
+NONE
+
+=back
+
+=cut
+
+##----------------------------------------------------------------------------
+sub initialize
+{
+  my $self  = shift;
+  my $param = shift;
+    
+  unless (defined($param))
+  {
+    cluck(qq{Parameter missing in call to initialize()\n});
+    return $self;
+  }
+  unless (ref($param))
+  {
+    my $str = qq{};
+    if (-f qq{$param})
+    {
+      if (open(my $fh, qq{<}, $param))
+      {
+        ## Read the file
+        while (my $line = <$fh>)
+        {
+          ## trim leading whitespace
+          $line =~ s/^\s+//x;
+          ## trim trailing whitespace
+          $line =~ s/\s+$//x;
+  
+          ## See if this is a comment and should be ignored
+          next if ($line =~ /^[#;]/x);
+  
+          ## Add this line to the option string
+          $str .= $line . qq{ };
+        }
+        close($fh);
+      }
+    }
+    else
+    {
+      $str = $param;
+    }
+    
+    try
+    {
+      $param = JSON->new->utf8(1)->relaxed->decode($str);
+    };
+  }
+
+  $self->_import_hash($param);
+  
+  ## Return object to allow chaining
+  return $self;
+}
+
+##----------------------------------------------------------------------------
+##     @fn _import_hash($hash)
+##  @brief Load a form using the hash parameters
+##  @param $param - Hash reference
+## @return NONE
+##   @note 
+##----------------------------------------------------------------------------
+sub _import_hash
+{
+  my $self = shift;
+  my $param = shift;
+
+  ## Import the "simple" non-array attributes
+  foreach my $attr (@SIMPLE_ATTRIBUTES)
+  {
+    $self->$attr($param->{$attr}) if (exists($param->{$attr}));
+  }
+  
+  ## Import the items
+  if (exists($param->{items}) && (ref($param->{items}) eq qq{ARRAY}))
+  {
+    foreach my $entry (@{$param->{items}})
+    {
+      unless (my $field = $self->add_item($entry))
+      {
+        cluck(
+          qq{Unable to create an item\n}, 
+          Data::Dumper->Dump([$entry], [qw(entry)]), 
+          qq{\n}
+        );
+      }
+    }
+  }
+  
+  if (exists($param->{icon_path}) && (ref($param->{icon_path}) eq qq{ARRAY}))
+  {
+    foreach my $entry (@{$param->{icon_path}})
+    {
+      unless (my $field = $self->add_icon_path($entry))
+      {
+        cluck(
+          qq{Unable to add to the icon path\n}, 
+          Data::Dumper->Dump([$entry], [qw(entry)]), 
+          qq{\n}
+        );
+      }
+    }
+  }
+  return;
+}
+
+##----------------------------------------------------------------------------
+##     @fn _next_row()
+##  @brief Return the current grid row and increment
+##  @param NONE
+## @return SCALAR containing the next grid row
+##   @note 
+##----------------------------------------------------------------------------
+sub _next_row
+{
+  my $self = shift;
+  
+  my $row = $self->_grid_row;
+  
+  $self->_grid_row($row + 1);
+  
+  return($row);
+}
+
+##----------------------------------------------------------------------------
+##     @fn _insert_spacer($win)
+##  @brief Insert a spacer (if needed) into the given window
+##  @param $win - Tk window object
+## @return 
+##   @note 
+##----------------------------------------------------------------------------
+sub _insert_spacer
+{
+  my $self = shift;
+  my $win  = shift;
+  
+  return unless ($self->button_spacing);
+  
+  ## Use an empty frame as a spacer 
+  $win->Frame(-height => $self->button_spacing)->grid(
+    -row => $self->_next_row,
+    );
+
+  
+  
+}
+
 
 
 ##****************************************************************************
