@@ -13,7 +13,7 @@ display a dialog of buttons to be used as a menu using Tk
 
 =head1 VERSION
 
-Version 0.02
+Version 0.03
 
 =head1 SYNOPSIS
 
@@ -62,7 +62,7 @@ use JSON;
 use Try::Tiny;
 
 ## Version string
-our $VERSION = qq{0.02};
+our $VERSION = qq{0.03};
 
 ## Used when importing a form, these are "simple" non-array attributes
 Readonly::Array my @SIMPLE_ATTRIBUTES => (
@@ -147,7 +147,7 @@ has cancel_on_escape => (
 
 =over 2
 
-The items contained in this menu.
+Array reference of items contained in this menu.
 
 =back
 
@@ -358,21 +358,19 @@ sub add_item
 ##****************************************************************************
 ##****************************************************************************
 
-=head2 show($parent)
+=head2 show()
 
 =over 2
 
 =item B<Description>
 
-Show the dialog as a child of the given parent, or as a new MainWindow if
-a parent is not specified.
+Show the dialog as a new MainWindow.
 
 The function will return if the users cancels the dialog or clicks a button
 
 =item B<Parameters>
 
-$parent - Parent window, if none is specified, a new MainWindow will be
-created
+NONE
 
 =item B<Return>
 
@@ -386,23 +384,13 @@ UNDEF when canceled, or the hash reference associated with the button clicked.
 sub show
 {
   my $self   = shift;
-  my $parent = shift;
   my $test   = shift;
   my $win;    ## Window widget
   my $result; ## Variable used to capture the result
   my $buttons = [];
 
-  ## Create the window
-  if ($parent)
-  {
-    ## Create as a TopLevel to the specified parent
-    $win = $parent->TopLevel(-title => $self->title);
-  }
-  else
-  {
-    ## Create as a new MainWindow
-    $win = MainWindow->new(-title => $self->title);
-  }
+  ## Create as a new MainWindow
+  $win = MainWindow->new(-title => $self->title);
   
   ## Hide the window
   $win->withdraw;
