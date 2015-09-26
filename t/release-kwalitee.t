@@ -6,27 +6,32 @@
 ##----------------------------------------------------------------------------
 ## NOTE:
 ##    Originally was allowing Dist::Zilla automatically generate this but
-##    found it would not work on my Windows 7 64-bit system, but worked
+##    found it would not work on one of my Windows 7 64-bit system, but worked
 ##    fine in linux.
+##    Added ability to skip the test if SKIP_KWALITEE environment variable
+##    is defined.
 ##----------------------------------------------------------------------------
 use strict;
 use warnings;
 use Test::More 0.88;
-use Test::Kwalitee 1.21 'kwalitee_ok';
+## See if the Test::Kwalitee module is installed
+eval "use Test::Kwalitee 1.21 'kwalitee_ok'";
+## Skip if the module is non installed
+plan skip_all => "Test::Kwalitee 1.21 required for testing kwalitee" if $@;
 
 BEGIN {
+  require Test::More;
+  
+  if ($ENV{SKIP_KWALITEE})
+  {
+    Test::More::plan(skip_all => 'SKIP_KWALITEE defined, skipping Kwalitee tests.');
+  }
+  
   unless ($ENV{RELEASE_TESTING}) {
-    require Test::More;
+    
     Test::More::plan(skip_all => 'these tests are for release candidate testing');
   }
-  if ($^O eq 'MSWin32')
-  {
-    require Test::More;
-    Test::More::plan(skip_all => 'Kwalitee tests have problems under Windoze');
-  }
 }
-
-
 
 kwalitee_ok();
 
