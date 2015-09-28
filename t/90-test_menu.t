@@ -29,7 +29,7 @@ BEGIN
   else
   {
     ## Could not create MainWindow, skip the tests 
-    Test::More::plan(skip_all => 'Skipping tests, no X Server detected');
+    Test::More::plan(skip_all => 'No X Server detected');
   }
 }
 
