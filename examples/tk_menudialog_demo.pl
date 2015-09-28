@@ -18,7 +18,7 @@ use lib File::Spec->catdir(File::Spec->splitdir(dirname(__FILE__)), qq{lib});
 ## Add script directory/../lib
 use lib File::Spec->catdir(File::Spec->splitdir(dirname(__FILE__)), qq{..}, qq{lib});
 use Readonly;
-use Tk::MenuDialog 0.02;
+use Tk::MenuDialog 0.04;
 use Data::Dumper;
 
 ##---------------------------------------
