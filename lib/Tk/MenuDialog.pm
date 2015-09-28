@@ -13,7 +13,7 @@ display a dialog of buttons to be used as a menu using Tk
 
 =head1 VERSION
 
-Version 0.03
+Version 0.04
 
 =head1 SYNOPSIS
 
@@ -62,7 +62,7 @@ use JSON;
 use Try::Tiny;
 
 ## Version string
-our $VERSION = qq{0.03};
+our $VERSION = qq{0.04};
 
 ## Used when importing a form, these are "simple" non-array attributes
 Readonly::Array my @SIMPLE_ATTRIBUTES => (
