@@ -1,11 +1,14 @@
 {{$NEXT}}
+        * Updated tests to skip on systems that do not have an X Server
+          running. This should avoid the large number of failures reported
+          by CPAN Testers service.
 
 0.03    2015-09-26
-		* Updated show() method to remove use of the parent parameter. Found
-		  this was not working properly.
-		* Updated release-kwalitee.t to skip tests if Test::Kwalitee module
-		  is not found
-		* Updated release-kwalitee.t to skip tests SKIP_KWALITEE is defined
+		    * Updated show() method to remove use of the parent parameter. Found
+		      this was not working properly.
+		    * Updated release-kwalitee.t to skip tests if Test::Kwalitee module
+		      is not found
+		    * Updated release-kwalitee.t to skip tests SKIP_KWALITEE is defined
 		
 0.02    2015-08-26
         * Added the initialize() method to allow initialization with a HASH
