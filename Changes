@@ -1,5 +1,8 @@
 {{$NEXT}}
 
+0.05    2015-09-29
+        * Updated tests again, added minimum perl requirement of 5.10
+        
 0.04    2015-09-28
         * Updated tests to skip on systems that do not have an X Server
           running. This should avoid the large number of failures reported
